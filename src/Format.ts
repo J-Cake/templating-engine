@@ -11,17 +11,19 @@ export default function Format(source: Token[]): Token[] { // Place the tokens i
     for (const token of source) {
         let isSkipped = false;
 
-        if (token.name === "component")
+        if (token.name === "component" || token.name === "tag")
             tagDepth++;
-        else if (token.name === "closingComponent") {
+        else if (token.name === "closingComponent" || token.name === "closingTag") {
             tagDepth--;
 
             if (tagDepth < 0) {
                 new CompilerError("syntax", `unexpected closing component ${token.content}`, token.file, token.line, token.character).throw();
             } else if (tagDepth === 0) {
-                tokens.push(new Token(`component:${body[0].content}`,
+                const name = body[0].content;
+
+                tokens.push(new Token(token.name === "closingComponent" ? "component" : "tag",
                     Format(body.splice(0, body.length).slice(1)), // Reformat in case the nesting depth is greater than 2
-                    token.file, token.line, token.character));
+                    token.file, token.line, token.character).setSubName(name.toString()));
 
                 isSkipped = true;
             }

@@ -13,6 +13,8 @@ interface LexState {
     numberContent: string[],
     componentStarted: boolean,
     componentContent: string[]
+    tagStarted: boolean,
+    tagContent: string[]
 }
 
 interface Dictionary<Value> {
@@ -23,9 +25,11 @@ const regex: Dictionary<RegExp> = {
     component: /^#([$_a-zA-Z][$_a-zA-Z0-9]*)#$/,
     closingComponent: /^#!([$_a-zA-Z][$_a-zA-Z0-9+]*)#$/,
     autoCloseComponent: /^#([$_a-zA-Z][$_a-zA-Z0-9]*)!#$/,
+    tag: /^<([$_a-zA-Z][$_a-zA-Z0-9]*)>$/,
+    closingTag: /^<\/([$_a-zA-Z][$_a-zA-Z0-9]*)>$/,
+    autoCloseTag: /^<([$_a-zA-Z][$_a-zA-Z0-9]*)\/>$/,
     keyword: /^([a-zA-Z][$_a-zA-Z0-9+]*)$/,
     number: /^(-?\d+(?:\.\d+)?)$/,
-    // boolean: /^true|false$/,
     variable: /^\$([$_a-zA-Z][$_a-zA-Z0-9]*)$/,
     char: /^[{}:,.]$/
 };
@@ -48,7 +52,11 @@ export default function Lex(source: string, file: string): Token[] { // Convert 
         numberStarted: false,
         numberContent: [],
         componentStarted: false,
-        componentContent: []
+        componentContent: [],
+        tagStarted: false,
+        tagContent: []
+
+        // TODO: Implement HTML tags
     };
 
     let lineCount = 0;
@@ -86,7 +94,17 @@ export default function Lex(source: string, file: string): Token[] { // Convert 
         "#": () => {
             if (last(tok) !== preferences.escapeChar)
                 states.componentStarted = !states.componentStarted;
+        },
+        "<": () => {
+            if (last(tok) !== preferences.escapeChar) {
+                states.tagStarted = true;
+            }
+        },
+        ">": () => {
+            if (last(tok) !== preferences.escapeChar)
+                states.tagStarted = false;
         }
+
     };
 
     for (const i of source) {

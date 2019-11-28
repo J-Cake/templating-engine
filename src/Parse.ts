@@ -1,7 +1,8 @@
 import Token from './token';
 import Handlers, {handler} from './Handlers';
-import grammar, {Matcher} from './grammar';
+import grammar, {isValue, Matcher} from './grammar';
 import ParseToken from "./ParseToken";
+import * as util from "util";
 
 function trim(tokens: Token[]): Token[] {
     const output: Token[] = [];
@@ -28,10 +29,11 @@ function matchLine(tokens: Token[], matcher: Matcher): boolean {
 interface grammarObject {
     tokens: Token[],
     handler: handler,
-    name: string
+    name: string,
+    subName: string, // in case more specific information is required
 }
 
-function lookupGrammar(tokens: Token[]): grammarObject {
+function lookupGrammar(tokens: Token[]): grammarObject[] {
     interface Potential {
         [Key: string]: Token[]
     }
@@ -47,12 +49,29 @@ function lookupGrammar(tokens: Token[]): grammarObject {
     }
 
     const key: string = Object.keys(potentials)[0];
-    return {
-        tokens: potentials[key],
-        handler: Handlers[key],
-        name: key
-    }; // ParseToken need to somehow obtain contents
 
+    if (key)
+        return [{
+            tokens: potentials[key],
+            handler: Handlers[key],
+            name: key,
+            subName: ""
+        }];
+    else {
+        let matches = true;
+
+        for (const token of tokens) if (!isValue(token.name)) {
+            matches = false;
+            break;
+        }
+
+        return matches ? tokens.map(i => ({
+            tokens: [i],
+            handler: Handlers["literal"],
+            subName: i.subName ? i.subName : i.name,
+            name: i.subName ? i.name : "literal"
+        })) : [];
+    }
 }
 
 export default function Parse(source: Token[], depth: number = 0): ParseToken[] { // More or less a pre-executer. Basically, configures the token tree for execution
@@ -66,20 +85,14 @@ export default function Parse(source: Token[], depth: number = 0): ParseToken[] 
             const children: Token[] = trim(statement.splice(0));
 
             if (children.length > 0) {
-                const match = lookupGrammar(children);
+                const matches = lookupGrammar(children);
 
-                const toke: Array<ParseToken | Token> = [];
+                for (const match of matches) {
+                    // console.log("Children", util.inspect(match.tokens, false, null, true), children.map(i => !!i.subName));
 
-                // if (!match.tokens)
-                console.log(children);
+                    tokens.push(new ParseToken(match.name, match.handler, match.tokens, false).setSubName(match.subName));
+                }
 
-                for (const token of match.tokens)
-                    if (token.content instanceof Array)
-                        toke.push(...Parse(token.content));
-                    else
-                        toke.push(new ParseToken(token.name, Handlers.literal, [token]));
-
-                tokens.push(new ParseToken(match.name, match.handler, toke));
             }
         }
     }

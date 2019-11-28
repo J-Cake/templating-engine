@@ -1,4 +1,4 @@
-import {Matcher} from "./grammar";
+import {isValue, Matcher} from "./grammar";
 
 export default class Token {
     name: string;
@@ -7,6 +7,7 @@ export default class Token {
     file: string;
     line: number;
     character: number;
+    subName?: string;
 
     constructor(name: string, content: string | Token[], file: string, line: number, character: number) {
         this.name = name;
@@ -17,15 +18,22 @@ export default class Token {
         this.character = character;
     }
 
+    setSubName(name: string): Token {
+        this.subName = name;
+        return this;
+    }
+
     match(matcher: Matcher): boolean {
         let name: boolean;
         if (["String", "RegExp"].includes(matcher[0].constructor.name)) {
-            if (typeof matcher[0] === "string")
-                if (this.name.indexOf("component:") === 0)
-                    name = matcher[0] === this.name.split(":")[0];
+            if (typeof matcher[0] === "string") {
+                if (matcher[0] === "value")
+                    name = isValue(this.name);
+                else if (matcher[0] === "element")
+                    name = this.name === "component" || this.name === "tag";
                 else
                     name = matcher[0] === this.name;
-            else
+            } else
                 name = matcher[0].test(this.name);
         } else {
             name = false;

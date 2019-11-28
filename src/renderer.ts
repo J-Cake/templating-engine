@@ -4,7 +4,8 @@ import Lex from './Lex';
 import Format from './Format';
 import Parse from './Parse';
 import Token from "./token";
-import Translate from "./Translate";
+import Execute from "./Execute";
+import ParseToken from './ParseToken';
 
 type FileName = {
     path: string,
@@ -21,10 +22,12 @@ function readFile(file: FileName): string {
 function parse(content: string, file: string, options?: Options): Element[] {
     const lexed: Token[] = Lex(content + "\n", file);
     const formatted: Token[] = Format(lexed);
-    const parsed = Parse([...formatted, new Token("BLANK", [], "", 0, 0)]);
-    // console.log();
-    // return Translate(parsed);
-    // return Translate(parsed);
+    const parsed: ParseToken[] = Parse([...formatted, new Token("BLANK", [], "<anonymous>", 0, 0)]);
+
+    console.log(parsed);
+    // const elements: Element[] = Execute(parsed);
+
+    // return elements;
     return [];
 }
 
@@ -42,8 +45,6 @@ export default function render(content: FileName | string, variables?: any, opti
     const elements = parse(file, path, variables);
 
     const doc: Document = Document.construct(path, 0, 0);
-
-    // console.log(elements);
 
     for (const element of elements)
         doc.addChild(element);

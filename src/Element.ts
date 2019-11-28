@@ -26,8 +26,8 @@ export default class Element {
         // TODO: Implement state
     }
 
-    stringify() {
-
+    toString():string {
+        return "";
     }
 
     static fromToken(token: Token): Element {
